@@ -1,0 +1,23 @@
+[package]
+name = "fork"
+version = "0.1.0"
+license = "MPL-2.0"
+description = "An open and collaborative research operating system kernel"
+categories = ["operating-system"]
+repository = "https://github.com/londoed/fork"
+authors = ["Eric Londo <londoed@comcast.net>"]
+edition = "2018"
+rust = "1.51.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+[workspace]
+members = [
+	"fs",
+	"kernel",
+	"librs",
+	"resource",
+	"src",
+]
