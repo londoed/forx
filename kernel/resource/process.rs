@@ -23,4 +23,6 @@ pub struct Process {
     name: String,
 }
 
+pub type ProcTable = Vec<Process>;
+
 
