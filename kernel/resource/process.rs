@@ -18,7 +18,7 @@ pub struct Process {
     context: Context,
     sleeping_chan: bool,
     killed: bool,
-    open_files: File,
+    open_files: Vec<File>,
     cwd: Inode,
     name: String,
 }

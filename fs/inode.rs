@@ -69,6 +69,37 @@ impl Inode {
         }
     }
 
+    pub fn update(&self, sb: SuperBlock) {
+        mut buf = Buffer::new();
+        mut di = Dinode::new();
+
+        let block_info = self.device.read(self.ino_id, sb);
+        mut dino = (block_info.data + self.ino_id % INODES_PER_BLOCK) as Dinode;
+
+        dino.typ = &self.typ;
+        dino.major = &self.major;
+        dino.minor = &self.minor;
+        dino.nlink = &self.nlink;
+        dino.size = &self.size;
+        dino.addrs = &self.addrs;
+
+        klog!(buf);
+        buf.release();
+
+    }
+
+    pub fn find(dev: Device, ino_id: u32) -> <Inode, fs::Error> {
+        for icache in dev {
+            for ino in icache {
+                if ino.ino_id == ino_id {
+                    return ino
+                } else {
+                    return InodeError("Unable to find Inode {:?} on device {dev}")
+                }
+            }
+        }
+    }
+
     pub fn device(&self) -> Device {
         return self.device
     }
