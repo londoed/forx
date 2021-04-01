@@ -1,0 +1,871 @@
+ABSTRACTIONS
+- Process
+- Thread
+- File
+- Socket
+- Memory page
+
+MECHANISMS
+- create(), schedule()
+
+EXAMPLE OF OS MEMORY
+- Memory page width a fixed size
+- Allocates page into DRAM
+- Maps the page into address space of process
+	- Process can then access the data of the page
+- Pages may be moved into different sections of physical memory
+	or can actually be written to disk
+- Uses the Least Recently Used (LRU) policy to determine where
+	pages are stored (swapping).
+	- Rationale: Least recently used pages are not as important as other,
+		therefore, they don't need the speed of something like DRAM
+		
+DESIGN PRINCIPLES
+- Separation between mechanisms and policy
+	- Implement flexible mechanisms to support many differing types
+		of policies
+	- EX: LRY, LFU, random
+- Optimize for common case
+	- Where will the OS be used?
+	- What will the user want to execute on that machine?
+	- What are the workload requirements?
+	
+USER/KERNEL PROTECTION BOUNDARY
+- User mode is unpriveleged, Kernel mode is privileged
+- Trap instructions occur when User-level programs attempt access
+	to the underlying hardware.
+- System calls used for applications to ask kernel to perform
+	privileged operations (open file, send on socket, allocate memory, etc.).
+- Also use signals to pass notifications into the applications
+
+SYSTEM CALLS
+- User process executes until it must ask something of the kernel.
+- User process performs system call to kernel with request arguments
+- Control is passed from user process to kernel while system call is being executed
+- Kernel control back to user process as well as any results that come with it.
+
+- Arguments to system call can either be directly sent to the operating system,
+	or through a pointer to their address space in a register.
+- SYNCHRONOUS MODE: Process waits until the system call is completed.
+
+USER/KERNEL TRANSITIONS
+- Perform access to certain types of hardware or changing allocations
+- Performs a number of pre-defined instructions
+- There is actual overhead that comes with the transition
+- Switches locality which can affect hardware cache--impact on application performance!
+- Not cheap!
+
+BASIC OS SERVICES
+- Scheduler (Controls access to CPU/GPU)
+- Memory manager (Controls access to allocation of physical memory)
+	Makes sure that multiple running applications don't overwrite each others data!
+- Block device driver (Responsible for access to block devices like a Disk)
+- File system (provides file abstraction that is useful to all applications.
+
+- OS must provide some way for applications to interface with
+	- Process management
+	- File management
+	- Memory management
+	- Storage management
+	- Security
+	- Communication
+	
+SYSTEM CALLS QUIZ
+On a 64-bit POSIX OS, which system call is used  to...
+
+1. Send a signal to a process? kill()
+2. Set the group identity of a process? setgid()
+3. Mount a file system? mount()
+4. Read/write system (kernel) parameters? sysctl()
+
+MONOLITHIC ARCHITECTURE
+- Every possible service is contained within the kernel
+	- Memory management
+	- Device drivers
+	- File management
+		- Several FS for different operations (sequential access, random I/O)
+	- Processes/threads
+	- Scheduling
+
+Pros
+- Everything included, quick messaging between components
+- Inlining and compile-time optimizations
+
+Cons
+- Constraned customization, portablility, manageability
+- Larger memory footprint
+- Performace hit
+
+MODULAR ARCHITECHTURE
+- Has a number of basic services, but more can be added as a kernel module
+- Implements standardized interfaces that modules must connect into
+	- Choice of file system, scheduler, device drivers, etc.
+- Can dynamically install modules at will
+
+Pros
+- Maintainability and upgradeability is better
+- Smaller memory footprint
+- Less constraint on resources
+
+Cons
+- Indirection can cause performance loss by reducing opportunities for optimizations
+	- Some effect, but not really significant
+- Some manageability can be lost because of the variability of components and their
+	sources
+	
+MICROKERNEL ARCHITECTURE
+- Only have the most basic primitive components inside the kernel
+	- Address space, context (or Thread), etc.
+- Other components are out in userspace
+	- Database, file system, device drivers, etc.
+- Requires lots of interprocess communication (IPC)
+
+Pros
+- Size
+- Verifyiability
+- Separation of components (better security)
+- Better performance
+
+Cons
+- Portability questionable
+- Complexity of the software development process due to specialization
+- Latency and cost of user/kernel transitions due to IPC overhead
+
+LINUX AND MACOS ARCHITECTURE
+- Level 1: Hardware (CPU, memory, disks, terminals, etc.)
+	BOUNDARY: Kernel
+- Level 2: Kernel (process management, memory management, I/O, etc.)
+	BOUNDARY: System call interface
+- Level 3: Standard Library (system calls, etc.)
+	BOUNDARY: Library interface
+- Level 4: Standard utility programs (shell, text editors, compilers)
+	BOUNDARY: User Interface (UI)
+- Level 4: Userspace (Applications)
+
+PROCESSES & PROCESS MANAGEMENT
+
+WHAT IS A PROCESS?
+- Instance of an executing program
+- Sometimes synonymous with "task" or "job"
+
+Components
+- Has a state of execution (program counter, stack pointer, etc.)
+- Has data, register state, and holding areas in memory
+- May require special hardware like I/O devices (disks, USB drives, etc.)
+
+- OS manages hardware on behalf of the applications
+	- Application that is on disk or in memory as a static entity
+- Once an application is launched, the process is the state of a program
+	when executing in loaded memory (active entity)
+- If the same program is launched more than once, several different
+	processes will be created with different states of execution
+
+WHAT DOES A PROCEESS LOOK LIKE?
+- A process contains all of the parts of a program
+	- Includes stack, heap, data, and text
+- Every element has to be uniquely identified by some identifier
+- OS abstraction used to record all program states is an address space
+- An address space is defined as a group of memory addresses from
+	V0 to Vmax that contain different process states
+
+TYPES OF STATE IN A PROCESS
+- Text and data
+	- Static state when process first loads
+- Heap is dynamically created and allocates memory through kernel, producing state
+- Heap is contiguous portion of address space starting immediately after the data
+	and growing upwards towards the "Stack". There may be holes in the space--it
+	is not necessarily contiguous!
+- "Stack" is the dynamic part of the address space state in that it grows and
+	shrinks during execution, but it does so in a last in first out (LIFO) order.
+- State of a process needs to be cached before we send another process to the CPU
+	in its place. This allows the process to be perfectly restored when it gets its turn again.
+- Lots of points where the state is moved from the stack into execution
+
+PROCESS ADDRESS SPACE
+- In memory representation of a process
+- The addresses of process state are called "virtual addresses" because they
+	don't have to correspond to actual locations in physical memory--its an OS abstraction
+- Instead, the kernel maintains a mapping ("page table") of virtual addresses to the physical
+	addresses that they are stored in
+	- Decouples the complex form of virtual address from the physical registers
+	- Allows physical memory to be reduced in complexity from the real world
+-  Mapping between physical and virtual address are placed by the kernel into
+	a "page table entry"
+
+ADDRESS SPACE AND MEMORY MANAGEMENT
+- Parts of virtual address space may not be allocated and
+	there might not even be enough physical memory to store
+	all processes state if we do need it
+- In order to deal with this, the kernel decides which portion of which
+	processes will be stored in physical memory
+- P1 and P2 might share parts of the physical memory (DRAM), while the rest of
+	their state is recorded on physical disk or persistent memory
+- Kernel uses page table to check the validity of access requests to internal memory
+	to make sure that a process is actually allowed to perform its actions
+
+VIRTUAL ADDRESSES QUIZ
+1. If two processes, P1 and P2, are running at the same time,
+	what are the virtual address space ranges they will have?
+	- They have V0 to Vmax, aka 0-64,000 because of mapping with page tables
+
+PROCESS EXECUTION STATE
+- The operating system must know exactly what it was doing when a
+	process was stopped so that it can reproduce where execution
+	begins when the process comes back
+- Before a program/process can be run, it must be compiled into a machine readable
+	binary format
+- Utilizes a program counter maintained
+0 "Program counter" (PC) is used to keep track of where a program is in its execution
+- "CPU registers" store execution while the program is
+	executing, and there are others registers in use at the same time
+- "Stack pointer" is the top of the stack and is the very last item placed on the stack
+	- This is useful because it will allow us to easily move the program from execution state
+		on the register to physical memory and eventually disk when it isn't currently running
+- To keep track of those important pieces of information and data, the kernel utilizes
+	a "Process Control Block"
+
+PROCESS CONTROL BLOCK
+- A data structure that the kernel maintains for every single process in use
+	- Process state
+	- Process id number
+	- Program counter
+	- Register values
+	- Memory limits
+	- List of open files
+	- Priority of task
+	- Signal mask
+	- CPU scheduling infomation
+- The PCB is created and allocated at the moment of process "forking"
+	- Program counter set to be pointing at the first instruction
+	- Program counter increments after the execution of every single instruction!
+- Certain fields of the PCB are updated whenever the process state changes
+- Other fields change too frequently to be updated all with everu little change
+	like the program counter
+- CPU has a dedicated register which it uses to track the program counter for
+	a currently executing process. 
+- Whenever the executing process is scheduled to be sidelined for another,
+	it is the kernel's responsibility to store every field in the PCB
+
+HOW IS PCB USED?
+- With two seperate processes--P1 and P2:
+	- P1 is executing and PCB updated according to hardcoded policies
+		and the kernel has already created, initialized and created both PCBs
+	- When P1 is currently running, it means that the CPU registers are
+		currently holding a values that correspond to the state of PCB.P1
+	- Then the kernel decides to interrupt P1 and all state information
+		must be stored in PCB.P2. P1 becomes idle
+	- Next, kernel must restore the state held in PCB.P2 in order to
+		begin execution--it updates the CPU registers with values that
+		correspond to the state held in PCB.P2
+	- If at some point, P2 requires more memory, it will make a request
+		via malloc() and the kernel will allocated that memory and establish
+		new virtual-to-physical address mappings in the page table of the process
+	- When P2 is done or an interrupt occurs, it will record all information
+		of the current state in PCB.P2 and restores PCB.P1
+	- P1 will now be running once the CPU registers reflect that state values
+		stored in PCB.P1
+	- Since the values in PCB.P1 correspond exactly to the values stored right
+		before it became idle, the process will pick up at the exact instruction
+		that it needs to in order to progress
+	- Each time this occurs, the kernel performs a "Context Switch"
+
+CONTEXT SWITCH
+- Mechanism that the operating system uses to Switch the CPU from the
+	context of one process to the context of another.
+- This incurs a very real "direct cost" due to the number of CPU cycles that
+	are required to load and store instructions and indirect costs like Cold caches
+	and cache misses.
+- CPUs have a hierarchy of caches from L0 to L1 to the highest level cache
+	- Each successive cache is large, but potentially slower than the one below
+		it.
+	- Accessing this cache is much faster than having to access memory (even DRAM)
+- When the data we need for the current process is stored in the CPU memory
+	cache, the processes is said to be a "hot cache"
+- When context switching, some or all of the data in the cache will be replaced
+	to make room for the next process to execute
+		- When the current process needs to execute again, its data will potentially
+			not be in the cache, causing it to be loaded from memory
+- Consequently, the kernel wants to limit the frequency of context switching!
+
+HOT CACHE QUIZ
+For the following sentance, check all options that correctly complete it:
+	When a cache is hot:
+		- Most process data is in the cache, so the process performance will
+			be at its best.
+		- Sometimes we must context switch.
+
+PROCESS LIFE CYCLE: STATE
+- Process can be running or idle, active or inactive
+	- When idle, the process is ready to execute, but waiting
+- What other states can it be in
+	- New...resources allocated, admitted and ready to start executing
+	- Ready/Idle
+	- Running/Active
+	- Terminated...resources deallocated and process no longer ready to run
+	- Waiting/idle
+
+PROCESS STATE QUIZ
+The CPU is able to execute a process when the process is in which state(S)?
+	- Running
+	- Ready
+
+PROCESSES CREATION
+- A process can create "child" processes
+- All processes branch from a single "root" process
+- Once the boot sequence is completed and the OS is loaded on the machine,
+	it will create some number of processes to start
+-Two main mechanisms for creating processes
+	- fork(): copies the parent PCB into the new child PCB
+		- then, both parent and child will continue execution at 
+				instruction after fork()
+	- exec(): replace child image by loading new program and start
+		from first instruction
+- Really what happens is, fork() is called, which creates child process and
+	after exec() is called which replaces the child's PCB
+
+PARENT PROCESS QUIZ
+1. On UNIX, which process is often regarded as the "parent of all processes"?
+	- init
+2. On the Android OS, which process is regarded as the "parent of all processes"
+	- zygote, it is the direct parent of all processes
+
+ROLE OF THE CPU SCHEDULER
+- A CPU scheduler determines __which one__ of the currently ready processes will
+	be dispatched to the CPU to start running, and __how long__ it should run for
+	- It manages how processes consume CPU resources
+- The kernel must preempt, or interrupt a process whilc saving its current context (all state)
+- Then it must run the scheduling algorithm to choose the next process
+- Once the next process is chosen, it must dispatch, or switch into the processes context.
+- MUST BE EFFICIENT!!
+	- Need efficient algorithms like the scheduler, and efficient data structures like the
+		waiting processes queue
+
+LENGTH OF PROCESS
+- How long should a process run for? How frequently should we run the scheduler?
+
+** ___ **
+Tp-----Tp ==
+
+Total processing time / Total time including scheduler interval
+(2 * Tp) / (2 * Tp + 2 * t.sched)
+
+- If the processing time and scheduling time are equal, that means
+	only 50% of CPU time spent on useful work!
+- If this is increased to 10x the amount of the processing time,
+	the CPU spends 91% of its time on useful work!
+- "Timeslice" is the time allocated to a process on the CPU
+
+- When designing a scheduler, we have to decide
+	1. What are the appropriate timeslice values
+	2. Metrics to choose next process to run
+
+WHAT ABOUT I/O?
+- A process can make its way into the ready queue by
+	1. An I/O event that a process was waiting on is completed
+	2. A timeslice expired
+	3. A child is forked
+	4. When an interrupt occurs that the process was waiting on
+
+SCHEDULER RESPONSIBILITY QUIZ
+1. Which of the following __ARE NOT__ a responsibility of the CPU scheduler?
+	- Maintaining the I/O queue
+	- Decision on when to generate an event that a process is waiting on
+2. Which ones __ARE__ the responsibility of the scheduler?
+	- Maintaing the ready queue
+	- Decision on when to context switch
+
+INTER-PROCESS COMMUNICATION
+- An operating system must provide a mechanism for processes to interact
+	with one another
+	- Transfer data/info between spaces
+	- Maintain protection and isolation
+	- Provide flexibility and performance
+
+1. Message passing IPC:
+	- OS provides communication channel, like a shared memory buffer
+	- Processes write (send) amd receive (recv) to/from channel
+
+	Pros
+		- OS manages the data in the buffer with similar system calls
+		- Overhead from having to copy data around to different processes
+
+2. Shared Memory IPC
+	- OS establishes a shared channel and maps it into process address
+		space
+	- Processes directly read/write from this memory
+	- OS is out of the way!
+	- No particular API deciding how memory in the channel is used
+		- Application developers must re-implement code if there is
+			no standard!
+
+SHARED MEMORY QUIZ
+1. Shared memory-based communication performs better than message
+	passing communication.
+	- It depends. The individual data exchange is cheaper because the
+		data doesn't have to be copied in and out of the kernel, but
+		the actual operation of mapping memory between two processes
+		is expensive itself.
+- It only makes sense to do shared memory-based communication if the
+	setup cost can be amoritized across a sufficient number of messages.
+
+THREADS AND CONCURRENCY
+
+PROCESS VS THREAD
+- A single-threaded process is represented by its
+	address space--a container for all of the process'
+	state during execution via virtual memory address
+	mappings and values of the execution context
+- This information is represented in a "process control
+	block" (PCB) for each individual process.
+- Each process will potentially execute different
+	instructions, access different memory locations,
+	and run for different time slices
+- A thread will need different data structures to
+	represent this per-process information via a
+	more complex PCB
+	- Contains all of the information that is shared
+		among all of the threads and seperate information
+		about every single execution context per-thread
+		relating to a single process
+
+WHY ARE THREADS USEFUL?
+- At any given point in time, there might be multiple
+	threads running for each process, each running
+	concurrently on a different processor.
+	- One possiblity is that each thread executes a different
+		portion of a single process instruction, like the input matrix
+	- Now, all of the threads are executing the exact same code,
+		but are not exaclty executing the exact same instructions
+		at each point in time.
+			- Each thread will have to have it's own copy of the
+				stack, register info, program counters, etc.
+			- By parallelizing a program in this manner, we can get a
+				significant speed up of the execution time.
+	- In addition, different threads might execute completely
+		different portions of the program--certain threads might
+		be designated for I/O, while others might be designated
+		for message passing between programs, for example
+	- Different threads may execute on different portions of the
+		code that correspond to different functions, for instance,
+		in a web application, different threads can handle different
+		customer requests
+- By specializing different threads to run different tasks,
+	we can differentiate how the kernel manages those threads.
+		- Higher priority threads can be given more resources for
+			their tasks than others
+		- Since much more state can be present in the processor cache
+			is directly correlated to performance, having more cache
+			area for different threads will increase performance,
+			sometimes drastically
+				- This causes a hotter cache because each thread is only
+					performing specific tasks, splitting up the amount of
+					memory required in each cache and allowing each thread
+					to perform its specified functionality quicker
+- We cannot have each thread running a different process
+	- Because the processes do not share an address space,
+		we have to allocate for every single address space
+		and execution context
+	- For a mutliprocessor system, this would require much higher
+		memory because every address space would have to be allocated
+- Instead, in singular process threads, we only need a single
+	address space shared among the threads along with the
+	execution context of each thread, reducing overall memory
+	footprint extensively
+- Multithreaded environment is more memory efficient that
+	its single threaded counterpart
+	- The process is more likely to completely fit into memory
+		and not require as many swaps from disk to execute
+- Another problem with sychronizing across different processes
+	requires inter-process communication (IPC), which can be
+	significantly more costly
+
+BENEFITS OF MULTITHREADING: SINGLE CPU
+- Are threads useful on a single CPU system? Are they useful
+	when the number of threads are greater than the number of CPUs?
+	- If a thread is waiting on some operation, like disk I/O,
+		a context switch might make sense if the time it is idle
+		is greater than the time it would take for two context
+		switches
+		- If (t_idle) > (2 * t_ctx_switch), then it makes sense
+			to hide the idling time with a context switch, which requires
+			copying of virtual addresses into the CPU registers.
+		- Since threads share an address space, this copying is reduced,
+			therefore, the context switch is not nearly as costly
+		- So, the time to context switch between threads is less than
+			the time to context switch between processes
+			- Therefore, the latency can be hidden in threads, where it
+				cannot in processes
+
+BENEFITS OF MULTITHREADING: APPLICATIONS AND OS CODE
+- Though it's extremely benefitial to application programs,
+	having a multithreaded operating system kernel will also
+	reduce the load and memory footprint of operating system
+	functions
+- Allows more efficient use of daemon processes to be used
+- The kernel threads may run on behalf of different applications
+	or OS services like device drivers
+
+PROCESS VS THREADS QUIZ
+1. Do t he following statements apply to processes (P), threads (T) 
+	or both (B)?
+	- Can share virtual address space [T]
+	- Take longer to context switch [P]
+	- Have an execution context [B]
+	- Usually result in hotter caches when multiples exist [T]
+	- Make use of some communication mechanisms [B]
+
+WHAT DO WE NEED TO SUPPORT THREADS?
+- Thread data structure
+	- Identify threads, keep track of resource usage, etc.
+- Mechanisms to create and manage threads
+- Mechanisms to safely coordinate among threads running
+	concurrently in the same address space
+	- Especially when there are certain dependencies required
+		- Threads running concurrently don't overwrite each others
+			input or results
+		- Or, a mechanism for one thread to wait until it can access
+			results produced by a different thread
+
+THREADS AND CONCURRENCY
+- With processes, the kernel makes sure that no operation from one
+	processes is allowed to be performed in a different process'
+	address space
+- Threads share the same physical to virtual address mappings
+	- If both threads are able to access and modify the same memory
+		at the same time, then the mapping could end up with some
+		inconsistencies
+	- One thread could be attempting to read the data at the exact
+		same time another is modifying it, changing the results
+		of the intended instruction set
+	- "Data races" occurs when multiple threads are attempting to
+		modify the same address at the same time
+- To deal with these issues, the kernel requires a mechanism
+	to manage threads in an exclusive manner, or "mutual exclusion"
+		- "Mutual exclusion" is when there is exclusive access to
+			only a single thread at a time is allowed to perform
+			some operation
+		- Remaining threads must wait their turn to perform the exact
+			same operation
+		- A "mutex" is used to provide this mechanism to threads
+- Also needs a mechanism for determining when threads will wait
+	on another to complete
+	- A specific condition must be met before this can occur
+	- A thread must be explicity notified when it needs to wait
+		and when it can continue operation
+	- "Condition variables" are used to handle this type of
+		inter-thread coordination
+- Both of these mechanisms are refered to as "synchronization mechanisms"
+- In addition, there must be a mechanism for waking up threads from a
+	a wait state
+
+THREAD CREATION
+- Need a datastructre to represent the data structure
+	- The thread "type" is a data structure that contains
+		all information that is specific to a thread including
+			thread identifier (ID), program counter, registers,
+			stack, stack pointer, and attributes
+		- Can be used by thread management system so that it can
+			better decide how to handle resource and time allocation
+			as well as how to properly debug issues with threads
+- Creation uses a fork() system call with two parameters:
+	a proc (process) argument and arugments for the procedure
+	- NOT to be confused with the UNIX fork system call
+		- Does not copy the parent thread because the process is
+			specified when it is created
+- For instance, there can be a situation where a single parent thread
+	does nothing except create a child thread and wait for results
+	or notifications of an inplace modification completion
+- join() system call allows a thread to be terminated by
+	taking the child thread ID as an arugment
+	- child.result = join(parent)
+	- Join causes the child thread to return its result or notification
+		to the parent thread, and will be terminated (joining back with 
+			its parent)
+		- Any state or resources allocated to the child process will be
+			freed and terminated
+	- All parent and child thread are equivalent because they can access
+		all resources allocated to the process as a whole and share them
+		amongst each other
+
+THREAD CREATION EXAMPLE
+{
+	Thread t1;
+	SharedList list;
+	t1 = fork(safe_insert, 4);
+	safe_insert(6);
+	join(thread) // Optional call
+}
+
+1. Some thread is created along with a shared list of state/resources
+	that is initially empty.
+2. Fork is called, initializng child thread t1, now t1 must execute the
+	safe_insert() procedure with an argument of 4.
+3. Parent thread continues its execution and at some point it will reach
+	an instruction to call safe_insert() itself, but with a different argument
+4. Because the threads are running concurrently and constantly being switched
+	while executing on the CPU, the order in which the two safe_insert()
+	operations is not clear.
+	- It is not guaranteed that when the fork, t1, hits safe_insert(4) 
+	that the execution will actually switch to t1 and allow it to perform
+	the function before the parent performs its safe_insert(6), or if
+	after the fork, the parent will execute safe_insert(6) while t1
+	is waiting for the parent's completion
+	- The list has two different states for each outcome, both are possible
+		executions
+5. Finally join(t1) is called. If it is called when t1 has completed,
+	t1 will return immediately, otherwise the parent thread will be blocked
+	at the join() call until t1 completes
+- In this example, the results of the child processing are available through
+	the shared list, so really the join() call is not a necessary part of the
+	source code--we will be able to access the results of the child thread
+	regardless
+
+HOW IS THE SHARED LIST UPDATED?
+{
+	create new list element e
+	set e.value = X
+	read list and list.p_next
+	set e.pointer = list.p_next
+	set list.p_next = e
+}
+
+1. Create a new list element with two fields:
+	a value and a pointer that points to the address
+	of the next element in the list
+2. The first element can be accessed by reading
+	the list head, which is a shared variable provided
+	by the list variable name
+3. Each thread that needs to insert an element in the list
+	must first create an element and initialize its value
+4. Then it will have to read the value of the head of the list
+	and set its pointer field to point to the value of whatever is
+	still in the list
+5. Then it will have to set the head of the list to point to
+	its newly created element
+
+[head] ---> [value_x] ---> [value_y]
+- When creating value_x, first create the data structure,
+	read the pointer of the list, which pointed to value_y,
+	set the new element and its value_x to point to value y,
+	and finally set the head pointer to point to value_x
+- SO, new elements are inserted at the head of the list
+- There is a problem if two threads are attempting to
+	update the pointer of the first element in the list at 
+	the same time
+	- We don't know the outcome of this operation if two
+		threads are executing the same procedure at the
+		same time and trying to set different values in
+		the p_next field
+- There is also a problem if two threads are running on
+	the same CPU at the same time because their operations
+	are randomly interleaved
+	- They may both read the head of the list and the pointer
+		to the next value in the list. They will both set their
+		pointers to be null and take turns setting the actual
+		list pointer to point to them
+		- Only one element will be successfully linked to the list
+			and the other one will be lost.
+
+MUTUAL EXCLUSION (MUTEX)
+- Kernels and threaded libraries in general support a construct 
+	called a "mutex"
+- A mutex is like a log that should be used whenever accessing
+	data or state that is shared among threads
+- When a thread "locks" a mutex, it has exclusive access rights
+	the shared resource
+- Other threads attempting to lock the same mutex must are not
+	going to be successful
+	- Term used is "acquired the lock"
+- Unsuccessful threads will be blocked on the lock operation 
+	until the mutex owner releases it
+- Therefore, the mutex should contain information
+	- Status (locked or not?)
+	- The current owner
+	- Some sort of list of all the threads that are blocked when
+		trying to acquire the locked mutex and are waiting for
+		it to be freed
+- The "critical section" is the portion of the code that works
+	to protect the mutex
+	- Any operation that requires that only a single thread at a
+		time can safely perform that operation
+		- Update to a shared variable, like the list, or incrementing
+		a counter, or performing a write()
+- Other than the critical sections in the code, the threads may
+	be free to continue their execution as if they were working
+	sequentially 
+
+---> == wait/idle time
+~~~> == execution
+{}   == enter critical section of code
+[]   == enter non-critical section of code
+
+t1 ~~~>[]~~~~>{}~~~>[]~~~>[]~~~>[]
+t2 ~~~>[]~~~~~~---->{}~~~>[]~~~>[]
+t3 ~~~>[]~~~~~~---------->{}~~~>[]
+
+- Threads are mutually exclusive with one another regarding the
+	execution of the critical section
+- When a lock is freed, any one of the threads waiting for the lock,
+	or even a brand new thread just reaching the lock can start the
+	lock operation. So, t3 could actually execute before t2 even though
+	t2 was waiting first in the above example
+- Most common APIs have to separate calls, lock() and unlock(), even
+	though the term "lock" will be exclusively used
+
+// Birrell's Lock API
+Lock(m) {
+	// critical section statements
+} // unlock
+______________________
+Common Thread API
+lock(m);
+// critical section statements
+unlock(m);
+----------------------
+// end
+
+- We must explicitly lock the mutex upon entering the critical section
+	as well as explicitly unlock the mutex when we depart it.
+
+MUTEX EXAMPLE
+{
+	list<int> my_list;
+	Mutex m;
+
+	void 
+	safe_insert(int i)
+	{
+		lock(m);
+		my_list.insert(i);
+		unlock(m);
+	}
+}
+
+- Same example as above ^
+
+MUTEX QUIZ
+1. Threads t1-t5 are contending for a mutex m. t1 is the first to
+	obtain the mutex. Which thread will get access to m after t1
+	releases it? Mark all that apply.
+
+t1 ~~~~~~~>{~~~~~~~~~~~}~~~~~>
+t2 ~~~~~~~~~~~~~~>X---->??????
+t3 ~~~~~~~~~~~~~~~~~~~~~>X????
+t4 ~~~~~~~~~~>X-------->??????
+t5 ~~~~~~~~~~~~>X~~~~~>X??????
+
+- Because t2 and t4 requested the lock before it was freed,
+	they're definitely included in the queue for lock acquisition
+	after t1. Either one can be the next one to execute depending on
+	the kernel's policy.
+- It doesn't matter that t4 attempted the lock operation before t2
+	because we don't have enough information on the metrics of the
+	threads (priority, etc.)
+- t3 is unlikely since it doesn't issue the lock operation until
+	after t1 released it and a different thread acquired it
+- t5 is a likely candidate because the lock is released by t1 just before
+	t5 makes its request to require the lock. So, t5 could potentially grab
+	the lock before either t2 or t4 in the queue are given access
+
+PRODUCER/CONSUMER EXAMPLE
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
