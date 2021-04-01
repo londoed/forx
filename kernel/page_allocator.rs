@@ -1,5 +1,5 @@
 //
-  // FORK: An open and collaborative research operating system kernel.
+  // FORX: An open and collaborative research operating system kernel.
   //
   // Copyright (C) 2021, Eric Londo <londoed@comcast.net>, { kernel/page_allocator.rs }.
   // This Source Code Form is subject to the terms of the Mozilla Public License v2.0.

@@ -1,5 +1,5 @@
 //
-  // FORK: An open and collaborative operating system kernel for research purposes.
+  // FORX: An open and collaborative operating system kernel for research purposes.
   //
   // Copyright (C) 2021, Eric Londo <londoed@comcast.net>, { fs/inode.rs }.
   // This Source Code Form is subject to the terms of the Mozilla Public License v2.0.
