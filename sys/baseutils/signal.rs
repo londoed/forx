@@ -292,14 +292,11 @@ impl Signal {
         return val <= ALL_SIGNALS.len()
     }
 
-    pub fn get_disposition(sig: Signal) -> Option<Disposition> {
-        if Ok(ret) = sig.dispo {
+    pub fn get_disposition(&self) -> Option<Disposition> {
+        if Ok(ret) = self.dispo {
             return Some(ret)
         }
 
         return None
     }
 }
-
-let val: i32 = mysig.get_value();
-let sig: Signal = sig.get_signal(value);
