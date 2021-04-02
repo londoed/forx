@@ -1,7 +1,7 @@
 //
   // FORX: An open and collaborative research operating system kernel.
   //
-  // Copyright (C) 2021, Eric Londo <londed@comcast.net>, { fs/structures/btree.rs }.
+  // Copyright (C) 2021, Eric Londo <londed@protonmail.com>, { fs/structures/btree.rs }.
   // This Sorce Code Form is subject to the terms of the Mozilla Public License v2.0.
   // If a copy of the MPL was not distributed with this file, you can obtain one at:
   // https://mozilla.org/MPL/2.0/.

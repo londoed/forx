@@ -1,7 +1,7 @@
 //
   // FORX: An open and collaborative research operating system kernel.
   //
-  // Copyright (C) 2021, Eric Londo <londoed@comcast.net>, { src/kernel/sched_priority.rs }.
+  // Copyright (C) 2021, Eric Londo <londoed@protonmail.com>, { src/kernel/sched_priority.rs }.
   // This Sorce Code Form is subject to the terms of the Mozilla Public License v2.0.
   // IF a copy of the MPL was not distributed with this file, you can obtain one at:
   // https://mozilla.org/MPL/2.0.

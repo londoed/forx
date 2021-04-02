@@ -5,7 +5,7 @@ license = "MPL-2.0"
 description = "An open and collaborative research operating system kernel"
 categories = ["operating-system"]
 repository = "https://github.com/londoed/forx"
-authors = ["Eric Londo <londoed@comcast.net>"]
+authors = ["Eric Londo <londoed@protonmail.com>"]
 edition = "2018"
 rust = "1.51.0"
 
@@ -15,9 +15,14 @@ rust = "1.51.0"
 
 [workspace]
 members = [
+	"arch",
 	"fs",
+	"init",
+	"ipc"
 	"kernel",
-	"librs",
-	"resource",
+	"libctl",
+	"shell",
 	"src",
+	"sys",
+	"user",
 ]
