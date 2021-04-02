@@ -7,6 +7,7 @@
   // https://mozilla.org/MPL/2.0.
 //
 
+#[derive(Debug, Clone)]
 pub struct Context {
     pub rbp: u64,
     pub rax: u64,
