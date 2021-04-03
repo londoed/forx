@@ -26,3 +26,9 @@ members = [
 	"sys",
 	"user",
 ]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

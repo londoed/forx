@@ -11,7 +11,7 @@ pub struct Process {
     size: u32,
     page_dir: PageTable,
     kstack: char,
-    state: ProcessState,
+    state: ProcState,
     pid: i32,
     parent: Process,
     trap_frame: TrapFrame,
@@ -24,5 +24,21 @@ pub struct Process {
 }
 
 pub type ProcTable = Vec<Process>;
+
+pub enum ProcState {
+    PROC_RUNNING,
+    PROC_READY,
+    PROC_INTERRUPTIBLE,
+    PROC_UNINTERRUPTIBLE,
+    PROC_STOPPED,
+    PROC_TRACED,
+}
+
+impl Process {
+    pub fn set_state(&self, state: ProcState)
+    {
+        self.state = state;
+    }
+}
 
 
