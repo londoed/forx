@@ -11,7 +11,7 @@
 #ifndef INCLUDE_FORX_TYPES_H
 #define INCLUDE_FORX_TYPES_H
 
-#include <uapi/types.h>
+#include <forx/types.h>
 #include <forx/config/autoconfig.h>
 #include <forx/stddef.h>
 #include <forx/compiler.h>

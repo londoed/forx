@@ -19,7 +19,7 @@
 #include <forx/schedule.h>
 #include <forx/work.h>
 
-static struct Workqueue kwork = WORKQUEUE_INIT(kwork);
+static struct WorkQueue kwork = WORKQUEUE_INIT(kwork);
 
 /**
  * `struct work` is designed such that a particular instance of it will only
@@ -36,7 +36,7 @@ static struct Workqueue kwork = WORKQUEUE_INIT(kwork);
 static int
 workqueue_thread(void *q)
 {
-    struct Workqueue *queue = q;
+    struct WorkQueue *queue = q;
     struct Work *work = NULL;
     int clear_work = 0;
 
@@ -70,7 +70,7 @@ workqueue_thread(void *q)
 }
 
 void
-workqueue_start_multiple(struct Workqueue *queue, const char *thread_name, int thread_count)
+workqueue_start_multiple(struct WorkQueue *queue, const char *thread_name, int thread_count)
 {
     int i;
     struct Page *tmp_page = page_alloc(0, PAL_KERNEL);
@@ -87,13 +87,13 @@ workqueue_start_multiple(struct Workqueue *queue, const char *thread_name, int t
 }
 
 void
-workqueue_start(struct Workqueue *queue, const char *thread_name)
+workqueue_start(struct WorkQueue *queue, const char *thread_name)
 {
     workqueue_start_multiple(queue, thread_name, 1);
 }
 
 void
-workqueue_add_work(struct Workqueue *queue, struct Work *work)
+workqueue_add_work(struct WorkQueue *queue, struct Work *work)
 {
     using_spinlock(&queue->lock) {
         flag_set(&work->flags, WORK_SCHEDULED);

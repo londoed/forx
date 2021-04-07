@@ -136,3 +136,168 @@ seq_open(struct File *filp, const struct SeqFileOps *ops)
 
     return 0;
 }
+
+off_t
+seq_lseek(struct File *filp, off_t off, int whence)
+{
+    struct SeqFile *seq = filp->priv_data;
+
+    using_mutex(&seq->lock) {
+        switch (whence) {
+        case SEEK_SET:
+            filp->offset = off;
+            break;
+
+        case SEEK_END:
+            __seq_file_fill(seq);
+            filp->offset = kbuf_get_length(&seq->buf) + off;
+            break;
+
+        case SEEK_CUR:
+            filp->offset += off;
+            break;
+
+        default:
+            return -EINVAL;
+        }
+
+        if (filp->offset < 0)
+            filp->offset = 0;
+
+        if (filp->offset == 0) {
+            flag_clear(&seq->flags, SEQ_FILE_DONE);
+            seq->iter_offset = 0;
+            kbuf_clear(&seq->buf);
+        }
+    }
+
+    return filp->offset;
+}
+
+int
+seq_read(struct File *filp, struct UserBuffer ptr, size_t len)
+{
+    struct SeqFile *seq = filp->priv_data;
+
+    if (!file_is_readable(filp))
+        return -EBADF;
+
+    int ret = seq_file_read(seq, filp->offset, ptr, len);
+
+    if (ret > 0)
+        filp->offset += ret;
+
+    return ret;
+}
+
+int
+seq_release(struct File *filp)
+{
+    struct SeqFile *seq = filp->priv_data;
+
+    seq_file_clear(seq);
+    kfree(seq);
+    filp->priv_data = NULL;
+
+    return 0;
+}
+
+static ListNode *
+__seq_list_iter(struct SeqFile *seq, ListHead *head, int start_offset)
+{
+    ListNode *node;
+
+    if (list_empty(head)) {
+        flag_set(&seq->flags, SEQ_FILE_DONE);
+
+        return NULL;
+    }
+
+    node = __list_first(head);
+    int i;
+
+    for (i = start_offset; i < seq->iter_offset; i++) {
+        if (list_is_last(head, node)) {
+            flag_set(&seq->flags, SEQ_FILE_DONE);
+
+            return NULL;
+        }
+
+        node = node->next;
+    }
+
+    return node;
+}
+
+ListNode *
+seq_list_start_node(struct SeqFile *seq, ListHead *head)
+{
+    return __seq_list_iter(seq, head, 0);
+}
+
+ListNode *
+seq_list_start_header_node(struct SeqFile *seq, ListHead *head)
+{
+    if (seq->iter_offset == 0)
+        return NULL;
+
+    return __seq_list_iter(seq, head, 1);
+}
+
+ListNode *
+seq_list_next_node(struct SeqFile *seq, ListNode *node, ListHead *head)
+{
+    seq->iter_offset++;
+
+    if (!node) {
+        if (list_empty(head)) {
+            flag_set(&seq->flags, SEQ_FILE_DONE);
+
+            return NULL;
+        }
+
+        return __list_first(head);
+    }
+
+    if (list_is_last(head, node)) {
+        flag_set(&seq->flags, SEQ_FILE_DONE);
+
+        return NULL;
+    }
+
+    return node->next;
+}
+
+int
+seq_list_start(struct SeqFile *seq, ListHead *head)
+{
+    seq->priv = seq_list_start_node(seq, head);
+
+    return 0;
+}
+
+int
+seq_list_start_header(struct SeqFile *seq, ListHead *head)
+{
+    seq->priv = seq_list_next_node(seq, seq->priv, head);
+
+    return 0;
+}
+
+int
+seq_list_next(struct SeqFile *seq, ListHead *head)
+{
+    seq->priv = seq_list_next_node(seq, seq->priv, head);
+
+    return 0;
+}
+
+ListNode *
+seq_list_get(struct SeqFile *seq)
+{
+    return seq->priv;
+}
+
+#ifdef CONFIG_KERNEL_TESTS
+#include "seq_file_test.c"
+#endif
