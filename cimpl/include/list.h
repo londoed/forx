@@ -338,7 +338,7 @@ __list_take_last(ListHead *head)
     for (pos = list_empty(head) ? NULL : list_take_first(head, typeof(*pos), member); \
         pos;
         pos = list_empty(head) ? NULL : list_take_first(head, typeof(*pos), member))
-
+        
 #define list_foreach_take_entry_reverse(head, pos, member) \
     for (pos = list_empty(head) ? NULL : list_take_last(head, typeof(*pos), member); \
         &(pos)->member != NULL;
