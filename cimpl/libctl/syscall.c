@@ -26,7 +26,8 @@
 #include <forx/wait.h>
 #include <forx/signal.h>
 
-Pid __fork(struct Task *current, Pid pgrp)
+Pid
+__fork(struct Task *current, Pid pgrp)
 {
     struct Task *new = task_fork(current);
 

@@ -32,7 +32,7 @@ page_table_map_entry(PageDir *dir, VirtAddr va, PhysAddr phys, Flags vm_flags, i
     PageDirEntry *pde = pgd_get_pde(dir, va);
 
     if (!pde_exists(pde)) {
-        Page page = page_zalloc_pa(0, PAL_KERNEL);
+        PhysAddr page = page_zalloc_pa(0, PAL_KERNEL);
         *pde = mk_pde(page, PDE_PRESENT | PDE_WRITABLE | PDE_USER);
     }
 
@@ -125,7 +125,7 @@ page_table_clear_range(PageDir &table, VirtAddr va, int pages, int should_free)
                 continue;
 
             if (should_free) {
-                Page page = pte_get_pa(pte);
+                PhysAddr page = pte_get_pa(pte);
 
                 if (page)
                     page_free_pa(page, 0);
@@ -171,7 +171,7 @@ page_table_copy_range(PageDir *new, PageDir *old, VirtAddr va, int pages)
         PageDirEntry *pde_new = pgd_get_pde_offset(new, dir);
 
         if (!pde_exists(pde_new)) {
-            Page pde_page = page_zalloc(0, PAL_KERNEL);
+            PhysAddr pde_page = page_zalloc(0, PAL_KERNEL);
 
             pde_set_pa(pde_new, pde_page);
             pde_set_writable(pde_new);
@@ -225,7 +225,7 @@ page_table_clone_range(PageDir *new, PageDir *old, VirtAddr va, int pages)
         PageDirEntry *pde_new = pgd_get_pde_offset(new, dir);
 
         if (!pde_exists(pde_new)) {
-            Page pde_pages = page_zalloc_pa(0, PAL_KERNEL);
+            PhysAddr pde_pages = page_zalloc_pa(0, PAL_KERNEL);
 
             pde_set_pa(pde_new, pde_page);
             pde_set_writable(pde_new);
