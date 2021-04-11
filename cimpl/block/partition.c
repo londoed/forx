@@ -60,4 +60,32 @@ mbr_add_parititions(struct BlockDev *dev)
     uint8_t *blk = block_dup->virt;
 
     // Check for the marker indicating an MBR is present //
+    if (blk[510] != 0x55 || blk[511] != 0xAA)
+        goto release_copy;
+
+    for (i = 0; i < ARRAY_SIZE(mbr_part_offsets); i++) {
+        struct MbrPart *p = (struct MbrPart *)(block_dup->virt + mbr_part_offsets[i]);
+
+        if (p->lba_length) {
+            struct DiskPart *part = disk_part_alloc();
+            part->first_sector = p->lba_start;
+            part->sector_count = p->lba_length;
+
+            kprintf(KERN_NORM, "Partition for device %d:%d: start %d, len: %d\n",
+                DEV_MAJOR(dev->dev), DEV_MINOR(dev->dev), part->first_sector, part->sector_count);
+            disk_part_add(disk, part);
+            part_count++;
+        }
+    }
+
+release_copy:
+    page_free(block_dup, 0);
+
+    return part_count;
+}
+
+int
+block_dev_repartition(struct BlockDev *bdev)
+{
+    return mbr_add_partitions(bdev);
 }
