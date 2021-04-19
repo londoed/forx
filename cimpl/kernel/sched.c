@@ -59,7 +59,7 @@ sched_next_pid(void)
 void
 sched_task_entry(void)
 {
-    spinklock_release(&ktasks.lock);
+    spinlock_release(&ktasks.lock);
 }
 
 void

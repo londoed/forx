@@ -20,7 +20,7 @@ struct cmd_arg {
     const char *value;
 };
 
-extern struct kparam __kparam_start, __kparam_end;
+extern struct KParam __kparam_start, __kparam_end;
 
 static int
 parse_bool(const char *value)
@@ -56,12 +56,13 @@ parse_int(const char *value, int *out)
 }
 
 static int
-kparam_parse_bool(struct kparam *param, struct cmd_arg *arg)
+kparam_parse_bool(struct KParam *param, struct CmdArg *arg)
 {
     int val = parse_bool(arg->value);
 
     if (val == -1) {
-        kp(KP_WARN, "Bool value for arg `%s` is invalid. Value: `%s`\n", arg->name, arg->value);
+        kprintf(KERN_WARN, "Bool value for arg `%s` is invalid. Value: `%s`\n",
+          arg->name, arg->value);
 
         return -1;
     }
@@ -72,7 +73,7 @@ kparam_parse_bool(struct kparam *param, struct cmd_arg *arg)
 }
 
 static int
-kparam_parse_string(struct kparam *param, struct cmd_arg *arg)
+kparam_parse_string(struct KParam *param, struct CmdArg *arg)
 {
     *(const char **)param->param = arg->value;
 
@@ -80,13 +81,13 @@ kparam_parse_string(struct kparam *param, struct cmd_arg *arg)
 }
 
 static int
-kparam_parse_int(struct kparam *param, struct cmd_arg *arg)
+kparam_parse_int(struct KParam *param, struct CmdArg *arg)
 {
     int val;
     int err = parse_int(arg->value, &val);
 
     if (err == -1) {
-        kp(KP_WARN, "Integer value for arg `%s` is invalid. Value `%s`\n",
+        kprintf(KERN_WARN, "Integer value for arg `%s` is invalid. Value `%s`\n",
            arg->name, arg->value);
 
         return -1;
@@ -98,26 +99,26 @@ kparam_parse_int(struct kparam *param, struct cmd_arg *arg)
 }
 
 static int
-kparam_parse_loglevel(struct kparam *param, struct cmd_arg *arg)
+kparam_parse_loglevel(struct KParam *param, struct CmdArg *arg)
 {
     int val;
 
     if (strcasecmp(arg->value, "error") == 0) {
-        val = KP_ERROR;
+        val = KERN_ERR;
     } else if (strcasecmp(arg->value, "warning") == 0) {
-        val = KP_WARN;
+        val = KERN_WARN;
     } else if (strcasecmp(arg->value, "normal") == 0) {
-        val = KP_NORMAL;
+        val = KERN_NORM;
     } else if (strcasecmp(arg->value, "debug") == 0) {
-        val = KP_DEBUG;
+        val = KERN_DEBUG;
     } else if (strcasecmp(arg->value, "trace") == 0) {
-        val = KP_TRACE;
+        val = KERN_TRACE;
     } else {
         const char *endp = NULL;
         long result = strtol(arg->value, &endp, 10);
 
         if (!endp || *endp) {
-            kp(KP_WARN, "arg `%s`: Log level `%s` is invalid\n", arg->name, arg->value);
+            kp(KERN_WARN, "arg `%s`: Log level `%s` is invalid\n", arg->name, arg->value);
 
             return -1;
         }
@@ -131,9 +132,9 @@ kparam_parse_loglevel(struct kparam *param, struct cmd_arg *arg)
 }
 
 static void
-process_argument(struct cmd_arg *arg)
+process_argument(struct CmdArg *arg)
 {
-    struct kparam *param = &__kparam_start;
+    struct KParam *param = &__kparam_start;
 
     for (; param < &__kparam_end; param++) {
         if (strcasecmp(param->name, arg->name) != 0)
@@ -171,7 +172,7 @@ process_argument(struct cmd_arg *arg)
         return;
     }
 
-    kp(KP_WARN, "Unknown kernel argument: `%s`=`%s`!\n", arg->name, arg->value);
+    kp(KERN_WARN, "Unknown kernel argument: `%s`=`%s`!\n", arg->name, arg->value);
 }
 
 static int
@@ -180,7 +181,7 @@ is_whitespace(char c)
     return c == ' ' || c == '\t';
 }
 
-enum parse_state {
+enum ParseState {
     STATE_ARG_BEGIN,
     STATE_ARG_EQUALS,
     STATE_VALUE_BEGIN,
@@ -191,8 +192,8 @@ void
 kernel_cmdline_init(void)
 {
     char *l = kernel_cmdline;
-    struct cmd_arg arg = { .name = NULL, .value = NULL };
-    enum parse_state state = STATE_ARG_BEGIN;
+    struct CmdArg arg = { .name = NULL, .value = NULL };
+    enum ParseState state = STATE_ARG_BEGIN;
 
     for (; *; i++) {
         switch (state) {
