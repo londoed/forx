@@ -295,5 +295,44 @@ e1000_device_init(struct PciDev *dev)
     e1000->net.linklayer_tx = arp_tx;
     e1000->dev = *dev;
 
+    // Enable BUS Mastering and I/O Space //
+    command_reg = pci_config_read_uint16(dev, PCI_REG_COMMAND);
+    pci_config_write_uint16(dev, PCI_REG_COMMAND, command_reg | PCI_COMMAND_BUS_MASTER |
+        PCI_COMMAND_MEM_SPACE);
 
+    if (pci_config_read_uint32(dev, PCI_REG_BAR(0)) & PCI_BAR_IO) {
+        e1000->io_base = pci_config_read_uint32(dev, PCI_REG_BAR(0)) & 0xFF8;
+    } else {
+        uint32_t mem = pci_config_read_uint32(dev, PCI_REG_BAR(0)) & 0xFFFFFFF0;
+        uint32_t size = pci_bar_size(dev, PCI_REG_BAR(0));
+
+        e1000->mem_base = kmmap(mem, size, F(VM_MAP_READ) | F(VM_MAP_WRITE));
+        kprintf(KERN_NORM, "  E1000 MEM: 0x%08x, %d bytes\n", mem, size);
+    }
+
+    kprintf(KERN_NORM, "  E1000 IO base: 0x%04x\n", e1000->io_base);
+    kprintf(KERN_NORM, "  E1000 MEM base: %p\n", e1000->mem_base);
+
+    e1000_eeprom_detect(e1000);
+    e1000_read_mac(e1000);
+    kprintf(KERN_NORM, "  E1000 MAC: "PRmac"\n", Pmac(e1000->net.mac));
+
+    int int_line = pci_config_read_uint8(dev, PCI_REG_INTERRUPT_LINE);
+    kprintf(KERN_NORM, "  Interrupt: %d\n", int_line);
+
+    e1000_setup_rx(e1000);
+    e1000_setup_tx(e1000);
+    int err = irq_register_callback(int_line, e1000_interrupt, "E1000", IRQ_INTERRUPT,
+        e1000, F(IRQF_SHARED));
+
+    if (err) {
+        kprintf(KERN_WARN, "e1000: Interrupt %d already taken and not shared\n",
+            PIC8259_IRQ0 + int_line);
+
+        return;
+    }
+
+    e1000_command_write32(e1000, REG_IMS, IMS_RXT0 | IMS_TXDW | IMS_RXDMT0 | IMS_RXSEQ
+        | IMS_LSC);
+    net_interface_register(&e1000->net);
 }
